@@ -26,7 +26,7 @@ Static Function ModelDef()
 	Local oFields := FWFormStruct(1, cTabela)
 
 	// oModel:SetDescription("Cadastro de Exemplo")
-	oModel:addFields("FIELDZZ6", , oFields)
+	oModel:AddFields("FIELDZZ6", , oFields)
 	oModel:SetPrimaryKey({ "ZZ6_CODIGO" })
 Return oModel
 
