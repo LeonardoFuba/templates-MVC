@@ -2,10 +2,8 @@
 #Include 'Protheus.ch'
 #Include 'FWMVCDef.ch'
 
-#DEFINE ID_FUNCAO "SXPOR13"
-
 /*/{Protheus.doc} SXPOR13
- * Funcao para cadastros de Intervalos para aplicar regra de volumetria
+ * Função para cadastros de Intervalos para aplicar regra de volumetria
  * @author Leonardo do Nascimento
  * @since 05/07/2023
  * @version 1.0
@@ -17,7 +15,7 @@ User Function SXPOR13()
 
 	//Cria um browse para a ZS4
 	oBrowse := FWMBrowse():New()
-	oBrowse:SetAlias("ZSB")
+	oBrowse:SetAlias("ZS4")
 	oBrowse:SetDescription("Intervalos para doses")
 	oBrowse:Activate()
 
@@ -25,48 +23,67 @@ User Function SXPOR13()
 Return Nil
 
 Static Function ModelDef()
-	//Na montagem da estrutura do Modelo de dados, o cabecalho filtrara e exibira somente 3 campos, ja¡ a grid ira carregar a estrutura inteira conforme funcao fModStruct
-	Local oModel      := MPFormModel():New('SXPOR13M')
-	Local oStruCab    := FWFormStruct(1, 'ZSB')
-	Local oStruGrid 	:= FwFormStruct(1, 'ZS4')
+	//Na montagem da estrutura do Modelo de dados, o cabeçalho filtrará e exibirá somente 3 campos, já a grid irá carregar a estrutura inteira conforme função fModStruct
+	Local oModel      := NIL
+	Local oStruCab    := FWFormStruct(1, 'ZS4', {|cCampo| AllTrim(cCampo) $ "ZS4_GRUPO;ZS4_DESCRI"})
+	Local oStruGrid 	:= FWFormStruct(1, 'ZS4')
 
-	//Agora, define no modelo de dados, que tera um Cabecalho e uma Grid apontando para estruturas acima
-	oModel:AddFields('FIELD1', Nil, oStruCab)
-	oModel:SetPrimaryKey({"ZSB_FILIAL", "ZSB_GRUPO"})
+	//Monta o modelo de dados, e na Pós Validação, informa a função fValidGrid
+	oModel := MPFormModel():New('SXPOR13M', /*bPreValidacao*/, {|oModel| .T.}, /*bCommit*/, /*bCancel*/ )
 
-	oModel:AddGrid('GRID1', 'FIELD1', oStruGrid,)
-	oModel:SetRelation('GRID1', { {'ZS4_FILIAL', 'xFilial("ZS4")'}, {"ZS4_GRUPO",  "ZSB_GRUPO"} }, ZS4->(IndexKey(1)))
+	//Agora, define no modelo de dados, que terá um Cabeçalho e uma Grid apontando para estruturas acima
+	oModel:AddFields('MdFieldZS4', NIL, oStruCab)
+	oModel:AddGrid('MdGridZS4', 'MdFieldZS4', oStruGrid, , )
+
+	//Monta o relacionamento entre Grid e Cabeçalho, as expressões da Esquerda representam o campo da Grid e da direita do Cabeçalho
+	oModel:SetRelation('MdGridZS4', {;
+		{'ZS4_FILIAL', 'xFilial("ZS4")'},;
+		{"ZS4_GRUPO",  "ZS4_GRUPO"},;
+		{"ZS4_DESCRI",  "ZS4_DESCRI"};
+		}, ZS4->(IndexKey(1)))
+
+	//Definindo outras informações do Modelo e da Grid
+	oModel:GetModel("MdGridZS4"):SetMaxLine(9999)
+	oModel:SetDescription("Campos e configurações")
+	oModel:SetPrimaryKey({"ZS4_FILIAL", "ZS4_GRUPO"})
 
 Return oModel
 
 
-
 Static Function ViewDef()
-	//Na montagem da estrutura da visualizacao de dados, vamos chamar o modelo criado anteriormente, no cabecalho vamos mostrar somente 3 campos, e na grid vamos carregar conforme a funcao fViewStruct
-	Local oView      := FWFormView():New()
-	Local oModel     := ModelDef()
-	Local oStruCab   := FWFormStruct(2, "ZSB")
-	Local oStruGrid  := FWFormStruct(2, 'ZS4')
+	//Na montagem da estrutura da visualização de dados, vamos chamar o modelo criado anteriormente, no cabeçalho vamos mostrar somente 3 campos, e na grid vamos carregar conforme a função fViewStruct
+	Local oModel    := FWLoadModel('SXPOR13')
+	Local oView     := FWFormView():New()
 
-	//Cria o View
+  // Lista de campos para compor a tela
+	Local oStruCab  := FWFormStruct(2, "ZS4", {|cCampo| AllTRim(cCampo) $ "ZS4_GRUPO;ZS4_DESCRI"})
+	Local oStruGrid := FWFormStruct(2, "ZS4", {|cCampo| !(Alltrim(cCampo) $ "ZS4_GRUPO;ZS4_DESCRI")})
+
+	//Define que no cabeçalho não terá separação de abas (SXA)
+	oStruCab:SetNoFolder()
+
+	// Relacionando os modelos
 	oView:SetModel(oModel)
-	oView:AddField('VIEW_ZSB', oStruCab, 'FIELD1')
-	oView:AddGrid('VIEW_ZS4', oStruGrid, 'GRID1')
+	oView:AddField('VIEW_ZS4', oStruCab, 'MdFieldZS4')
+	oView:AddGrid('GRID_ZS4', oStruGrid, 'MdGridZS4')
 
-	oView:CreateHorizontalBox("BOXSUP", 10)
-	oView:CreateHorizontalBox("BOXINF", 90)
+  // Layout da tela
+	oView:CreateHorizontalBox("MAIN", 10)
+	oView:CreateHorizontalBox("GRID", 90)
 
-	oView:SetOwnerView('VIEW_ZSB', 'BOXSUP')
-	oView:SetOwnerView('VIEW_ZS4', 'BOXINF')
-
-	oView:EnableControlBar(.T.)
+	// Anexa elementos
+	oView:SetOwnerView('VIEW_ZS4', 'MAIN')
+	oView:SetOwnerView('GRID_ZS4', 'GRID')
 
 	//Define o campo incremental da grid como o ZS4_ITEM
-	// oView:AddIncrementField('VIEW_ZS4', 'ZS4_ID')
+	// oView:AddIncrementField('GRID_ZS4', 'ZS4_ITEM')
+
+  //Removendo campos
+
 Return oView
 
 
-//Funcao chamada para montar o menu do Browser
+//Função chamada para montar o menu do Browser
 Static Function MenuDef()
 	Local aRotina := {}
 	ADD OPTION aRotina TITLE "Visualizar" ACTION "VIEWDEF.SXPOR13" OPERATION MODEL_OPERATION_VIEW   ACCESS 0 //OPERATION 2
